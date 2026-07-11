@@ -103,14 +103,22 @@ if (!empty($_SESSION['cart'])) {
 
                         <p class="font-bold"><?php echo format_price($product['price']); ?></p>
 
-                        <input type="number" min="1" max="<?php echo $product['stock']; ?>" name="quantities[<?php echo $product['product_id']; ?>]" value="<?php echo $item['quantity']; ?>" class="w-24 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 outline-none focus:border-cyan-400">
+                        <input type="number" min="1" max="<?php echo $product['stock']; ?>" 
+                               name="quantities[<?php echo $product['product_id']; ?>]" 
+                               value="<?php echo $item['quantity']; ?>" 
+                               class="w-24 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 outline-none focus:border-cyan-400">
 
                         <div class="text-right">
                             <p class="font-black text-cyan-400"><?php echo format_price($item['subtotal']); ?></p>
 
-                            <form method="POST">
+                            <!-- Delete button -->
+                            <form method="POST" style="display:inline;">
                                 <input type="hidden" name="action" value="remove">
                                 <input type="hidden" name="product_id" value="<?php echo $product['product_id']; ?>">
+                                <button type="submit" 
+                                        class="mt-2 bg-red-500 hover:bg-red-400 text-white px-4 py-2 rounded-xl font-bold transition">
+                                    Delete
+                                </button>
                             </form>
                         </div>
                     </div>
