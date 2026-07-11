@@ -1,4 +1,3 @@
-
 <?php
 include 'includes/databaseConnect.php';
 include 'includes/header.php';
