@@ -54,4 +54,4 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     </nav>
 </header>
 
-<main class="flex-grow">
+<main class="flex-grow w-full">
