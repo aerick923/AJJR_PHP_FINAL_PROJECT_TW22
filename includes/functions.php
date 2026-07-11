@@ -128,7 +128,7 @@ function seller_header($page_title, $active_page) {
 
 
 
-    <main class="flex-1 lg:ml-72">
+    <main class="flex-1 lg:ml-72 flex justify-center">
 
 
         <header class="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-lg border-b border-slate-800">
@@ -186,7 +186,7 @@ function seller_header($page_title, $active_page) {
         </header>
 
 
-        <div class="p-6 w-full max-w-7xl mx-auto">
+       <div class="p-6 w-full max-w-6xl">
 
 <?php
 }
