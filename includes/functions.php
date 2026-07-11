@@ -70,7 +70,7 @@ function seller_header($page_title, $active_page) {
     <link href="../output.css" rel="stylesheet">
 </head>
 
-<body class="bg-slate-950 text-white min-h-screen">
+<body class="bg-slate-950 text-white min-h-screen flex flex-col">
 
 
 <header class="bg-slate-900 border-b border-slate-800">
@@ -147,7 +147,7 @@ function seller_header($page_title, $active_page) {
 
 
 
-<main class="w-full">
+<main class="w-full flex-grow">
 
     <div class="max-w-7xl mx-auto p-6">
 
