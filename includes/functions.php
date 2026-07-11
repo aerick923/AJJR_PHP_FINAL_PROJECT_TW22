@@ -72,121 +72,84 @@ function seller_header($page_title, $active_page) {
 
 <body class="bg-slate-950 text-white min-h-screen">
 
-<div class="min-h-screen flex">
 
-    <aside class="hidden lg:flex lg:w-72 bg-slate-900 border-r border-slate-800 flex-col fixed inset-y-0">
+<header class="bg-slate-900 border-b border-slate-800">
 
-        <div class="p-6 border-b border-slate-800">
-            <a href="dashboard.php" class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-cyan-400 text-slate-950 flex items-center justify-center font-black text-xl">
-                    AJ
-                </div>
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
 
-                <div>
-                    <h1 class="font-black text-lg leading-none">AJJR Seller</h1>
-                    <p class="text-xs text-slate-400 mt-1">Admin Panel</p>
-                </div>
-            </a>
+        <div class="flex items-center gap-3">
+
+            <div class="w-12 h-12 rounded-2xl bg-cyan-400 text-slate-950 flex items-center justify-center font-black text-xl">
+                AJ
+            </div>
+
+            <div>
+                <h1 class="font-black text-lg leading-none">
+                    AJJR Seller
+                </h1>
+
+                <p class="text-xs text-slate-400 mt-1">
+                    Admin Panel
+                </p>
+            </div>
+
         </div>
 
 
-        <nav class="flex-1 p-4 space-y-2">
+        <div class="flex items-center gap-4">
 
-            <?php foreach ($links as $link) { 
-                $is_active = $active_page === $link[0];
-            ?>
+            <div class="hidden md:block text-right">
+                <p class="font-bold">
+                    <?= htmlspecialchars($admin_name); ?>
+                </p>
 
-                <a href="<?= $link[1]; ?>" 
-                class="flex items-center gap-3 px-4 py-3 rounded-2xl font-bold transition
-                <?= $is_active ? 'bg-cyan-400 text-slate-950' : 'text-slate-300 hover:bg-slate-800 hover:text-cyan-400'; ?>">
-
-                    <span><?= $link[3]; ?></span>
-                    <span><?= $link[2]; ?></span>
-
-                </a>
-
-            <?php } ?>
-
-        </nav>
+                <p class="text-xs text-slate-400">
+                    Administrator
+                </p>
+            </div>
 
 
-        <div class="p-4 border-t border-slate-800">
-
-            <a href="../store.php" 
-            class="block text-center border border-slate-700 hover:border-cyan-400 px-4 py-3 rounded-xl font-bold transition mb-3">
-                View Store
-            </a>
-
-            <a href="../logout.php" 
-            class="block text-center bg-red-500 hover:bg-red-400 text-white px-4 py-3 rounded-xl font-bold transition">
+            <a href="../logout.php"
+            class="bg-red-500 hover:bg-red-400 text-white px-4 py-2 rounded-xl font-bold transition">
                 Logout
             </a>
 
         </div>
 
-    </aside>
+    </div>
 
 
 
-    <main class="flex-1 lg:ml-72 flex justify-center">
+    <nav class="max-w-7xl mx-auto px-6 pb-4 flex gap-3 overflow-x-auto">
+
+        <?php foreach ($links as $link) { 
+
+            $is_active = $active_page === $link[0];
+
+        ?>
+
+        <a href="<?= $link[1]; ?>"
+        class="whitespace-nowrap px-5 py-3 rounded-xl font-bold transition
+        <?= $is_active 
+            ? 'bg-cyan-400 text-slate-950' 
+            : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-cyan-400'; ?>">
+
+            <?= $link[3]; ?>
+            <?= $link[2]; ?>
+
+        </a>
+
+        <?php } ?>
+
+    </nav>
+
+</header>
 
 
-        <header class="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-lg border-b border-slate-800">
 
-            <div class="px-6 py-4 w-full max-w-7xl mx-auto flex items-center justify-between">
+<main class="w-full">
 
-                <div>
-                    <h2 class="text-2xl font-black">
-                        <?= htmlspecialchars($page_title); ?>
-                    </h2>
-
-                    <p class="text-sm text-slate-400">
-                        Welcome, <?= htmlspecialchars($admin_name); ?>
-                    </p>
-                </div>
-
-
-                <div class="flex items-center gap-3">
-
-                    <a href="../store.php" 
-                    class="hidden md:inline-block text-slate-300 hover:text-cyan-400 font-bold">
-                        Store
-                    </a>
-
-                    <a href="../logout.php" 
-                    class="bg-red-500 hover:bg-red-400 text-white px-4 py-2 rounded-xl font-bold transition">
-                        Logout
-                    </a>
-
-                </div>
-
-            </div>
-
-
-            <div class="lg:hidden px-6 pb-4 flex gap-2 overflow-x-auto">
-
-                <?php foreach ($links as $link) { 
-
-                    $is_active = $active_page === $link[0];
-
-                ?>
-
-                <a href="<?= $link[1]; ?>" 
-                class="whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold
-                <?= $is_active ? 'bg-cyan-400 text-slate-950' : 'bg-slate-900 border border-slate-800 text-slate-300'; ?>">
-
-                    <?= $link[3]; ?> <?= $link[2]; ?>
-
-                </a>
-
-                <?php } ?>
-
-            </div>
-
-        </header>
-
-
-       <div class="p-6 w-full max-w-6xl">
+    <div class="max-w-7xl mx-auto p-6">
 
 <?php
 }
@@ -194,11 +157,11 @@ function seller_header($page_title, $active_page) {
 
 function seller_footer() {
 ?>
-        </div>
 
-    </main>
+    </div>
 
-</div>
+</main>
+
 
 </body>
 </html>
