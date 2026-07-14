@@ -9,7 +9,50 @@ function slugify_filename(string $text): string
     $text = strtolower($text);
     $text = preg_replace('/[^a-z0-9]+/', '-', $text);
     $text = trim($text, '-');
-    return $text . '.jpg';
+    return $text;
+}
+
+function placeholder_image(string $label): string
+{
+    $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">'
+         . '<rect width="100%" height="100%" fill="#ffffff"/>'
+         . '<text x="50%" y="50%" fill="#94a3b8" font-family="sans-serif" font-size="16" '
+         . 'text-anchor="middle" dominant-baseline="middle">' . htmlspecialchars($label) . '</text>'
+         . '</svg>';
+    return 'data:image/svg+xml;base64,' . base64_encode($svg);
+}
+
+// Some product images were saved on disk with a filename that doesn't match
+// the auto-generated slug (e.g. dashes/punctuation handled differently).
+// Map those by product_id to their real on-disk filename (no extension) here
+// instead of renaming the files.
+$GLOBALS['image_filename_overrides'] = [
+    6001  => 'seagate-barracuda-1tb-hd',              // hdd
+    7004  => 'seasonic-focus-gx850-850w-gold',         // psu
+    7005  => 'be-quiet-pure-power-12m-1000w-gold',     // psu
+    4003  => 'gskill-ripjaws-s5-16gb-ddr5-5600mhz',    // ram
+    4004  => 'teamgroup-tforce-delta-rgb-32gb-ddr5-6000mhz', // ram
+    10003 => 'deepcool-fc120-3pack',                   // fan
+    11004 => 'steelseries-apex-3-tk',                  // keyboard
+];
+
+function resolve_product_image(string $folder, string $product_name, int $product_id): string
+{
+    $overrides = $GLOBALS['image_filename_overrides'];
+    $slug = $overrides[$product_id] ?? slugify_filename($product_name);
+
+    $relative_dir = 'assets/images/products/' . $folder . '/';
+    $absolute_dir = __DIR__ . '/' . $relative_dir;
+
+    $extensions = ['jpg', 'jpeg', 'png', 'webp'];
+    foreach ($extensions as $ext) {
+        if (file_exists($absolute_dir . $slug . '.' . $ext)) {
+            return $relative_dir . $slug . '.' . $ext;
+        }
+    }
+
+    // No matching file found on disk under any known extension -> safe placeholder
+    return placeholder_image($product_name);
 }
 
 function generate_specs(array $product): array
@@ -112,8 +155,6 @@ $product_specs = [
     ['product_id' => 2001, 'category_id' => 2,  'product_name' => 'NVIDIA GeForce RTX 3050',     'description' => 'Entry-level GPU for esports, light AAA gaming, and everyday graphics use.', 'price' => 12999, 'stock' => 14],
     ['product_id' => 2002, 'category_id' => 2,  'product_name' => 'NVIDIA GeForce RTX 4060',      'description' => 'Efficient 1080p graphics card with modern ray tracing and DLSS support.', 'price' => 17999, 'stock' => 13],
     ['product_id' => 2003, 'category_id' => 2,  'product_name' => 'NVIDIA GeForce RTX 4070 SUPER','description' => 'Excellent 1440p GPU with strong performance and great power efficiency.', 'price' => 34999, 'stock' => 8],
-    ['product_id' => 2004, 'category_id' => 2,  'product_name' => 'NVIDIA GeForce RTX 4080 SUPER','description' => 'High-end graphics card for premium 4K gaming and creator workloads.', 'price' => 59999, 'stock' => 4],
-    ['product_id' => 2005, 'category_id' => 2,  'product_name' => 'AMD Radeon RX 6600',          'description' => 'Great-value 1080p Radeon card for smooth mainstream gaming.', 'price' => 11999, 'stock' => 15],
     ['product_id' => 2006, 'category_id' => 2,  'product_name' => 'AMD Radeon RX 7600',          'description' => 'Modern 1080p card with strong value and efficient performance.', 'price' => 15999, 'stock' => 12],
     ['product_id' => 2007, 'category_id' => 2,  'product_name' => 'AMD Radeon RX 7800 XT',       'description' => 'Powerful 1440p GPU with high VRAM and strong raster performance.', 'price' => 32999, 'stock' => 7],
     ['product_id' => 2008, 'category_id' => 2,  'product_name' => 'AMD Radeon RX 7900 XTX',      'description' => 'Flagship Radeon GPU built for premium 4K gaming and heavy workloads.', 'price' => 56999, 'stock' => 3],
@@ -199,8 +240,7 @@ foreach ($product_specs as $spec) {
 
     $spec['category_name'] = $categories[$spec['category_id']]['category_name'];
     $spec['image_folder'] = $categories[$spec['category_id']]['folder'];
-    $spec['image_filename'] = slugify_filename($spec['product_name']);
-    $spec['image'] = 'assets/images/products/' . $spec['image_folder'] . '/' . $spec['image_filename'];
+    $spec['image'] = resolve_product_image($spec['image_folder'], $spec['product_name'], $spec['product_id']);
     $spec['specs'] = generate_specs($spec);
     $products[] = $spec;
 }
@@ -249,13 +289,13 @@ if ($category_filter > 0) {
                 onclick="openProductModal(this)"
             >
 
-                <div class="h-52 bg-gradient-to-br from-slate-800 to-slate-700 flex items-center justify-center relative overflow-hidden">
-                    <div class="absolute inset-0 bg-cyan-400/5 group-hover:bg-cyan-400/10 transition"></div>
+                <div class="h-52 bg-white flex items-center justify-center relative overflow-hidden p-4 box-border">
                     <img
                         src="<?php echo htmlspecialchars($product['image'], ENT_QUOTES, 'UTF-8'); ?>"
                         alt="<?php echo htmlspecialchars($product['product_name'], ENT_QUOTES, 'UTF-8'); ?>"
-                        class="absolute inset-0 w-full h-full object-cover transition duration-500 group-hover:scale-105"
+                        class="relative w-full h-full object-contain transition duration-500 group-hover:scale-105"
                         loading="lazy"
+                        onerror="this.onerror=null;this.src='<?php echo placeholder_image($product['product_name']); ?>';"
                     >
                 </div>
 
@@ -345,18 +385,21 @@ if ($category_filter > 0) {
         height: 260px;
         position: relative;
         overflow: hidden;
-        background: linear-gradient(135deg, #334155, #1e293b);
+        background: #ffffff;
         border-radius: 24px 24px 0 0;
         flex-shrink: 0;
+        box-sizing: border-box;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .pm-image-col img {
-        position: absolute;
-        top: 0;
-        left: 0;
+        position: relative;
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
     }
 
     .pm-details-col {
@@ -551,6 +594,10 @@ if ($category_filter > 0) {
 
             document.getElementById('modalProductImage').src = product.image;
             document.getElementById('modalProductImage').alt = product.product_name;
+            document.getElementById('modalProductImage').onerror = function () {
+                this.onerror = null;
+                this.src = product.image; // already resolved server-side; avoids infinite loop
+            };
 
             document.getElementById('modalProductCategory').textContent = product.category_name;
             document.getElementById('modalProductName').textContent = product.product_name;
