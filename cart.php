@@ -168,7 +168,7 @@ Clear Cart
 </button>
 </form>
 
-<a href="checkout.php"
+<a href="checkOut.php"
 class="bg-cyan-400 hover:bg-cyan-300 text-slate-950 px-6 py-3 rounded-xl font-black">
 Proceed to Checkout
 </a>
