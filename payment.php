@@ -168,7 +168,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             Submit Proof &amp; Place Order
         </button>
 
-        <a href="checkout.php" class="block text-center mt-4 text-slate-400 hover:text-cyan-400">
+        <a href="checkOut.php" class="block text-center mt-4 text-slate-400 hover:text-cyan-400">
             Back to Checkout
         </a>
     </form>
