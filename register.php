@@ -3,7 +3,7 @@ include 'includes/databaseConnect.php';
 include 'includes/header.php';
 
 $message = "";
-$dev_link = "";
+$message_type = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $first_name = clean_input($_POST['first_name'] ?? '');
@@ -22,95 +22,122 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if ($first_name === '' || $last_name === '') {
         $message = "Please enter your complete name.";
+        $message_type = "error";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $message = "Please enter a valid email address.";
+        $message_type = "error";
     } elseif (strlen($password) < 6) {
         $message = "Password must be at least 6 characters.";
+        $message_type = "error";
     } elseif ($password !== $confirm_password) {
         $message = "Passwords do not match.";
-    } elseif ($region === '' || $province === '' || $municipality === '' || $barangay === '') {
+        $message_type = "error";
+    } elseif (
+        $region === '' ||
+        $province === '' ||
+        $municipality === '' ||
+        $barangay === ''
+    ) {
         $message = "Please select your complete address.";
+        $message_type = "error";
     } elseif (!preg_match('/^09\d{9}$/', $contact_number)) {
         $message = "Contact number must start with 09 and contain exactly 11 digits.";
+        $message_type = "error";
     } else {
         $check = mysqli_prepare(
             $conn,
-            "SELECT user_id FROM users WHERE email = ? LIMIT 1"
+            "SELECT user_id
+             FROM users
+             WHERE email = ?
+             LIMIT 1"
         );
 
-        mysqli_stmt_bind_param($check, "s", $email);
-        mysqli_stmt_execute($check);
-        mysqli_stmt_store_result($check);
-
-        if (mysqli_stmt_num_rows($check) > 0) {
-            $message = "Email is already registered.";
+        if (!$check) {
+            $message = "Registration could not be processed. Please try again.";
+            $message_type = "error";
         } else {
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            $token = bin2hex(random_bytes(16));
+            mysqli_stmt_bind_param($check, "s", $email);
+            mysqli_stmt_execute($check);
+            mysqli_stmt_store_result($check);
 
-            $stmt = mysqli_prepare(
-                $conn,
-                "INSERT INTO users
-                (
-                    first_name,
-                    middle_name,
-                    last_name,
-                    email,
-                    password,
-                    region,
-                    province,
-                    municipality,
-                    barangay,
-                    contact_number,
-                    verification_token
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-            );
-
-            mysqli_stmt_bind_param(
-                $stmt,
-                "sssssssssss",
-                $first_name,
-                $middle_name,
-                $last_name,
-                $email,
-                $hashed_password,
-                $region,
-                $province,
-                $municipality,
-                $barangay,
-                $contact_number,
-                $token
-            );
-
-            if (mysqli_stmt_execute($stmt)) {
-                $verify_link =
-                    "http://localhost/PC_PARTS/verifyEmail.php?token=" .
-                    urlencode($token);
-
-                $subject = "AJJR PC Parts Email Verification";
-
-                $body =
-                    "Hello $first_name,\n\n" .
-                    "Click this link to verify your account:\n" .
-                    $verify_link;
-
-                $headers = "From: no-reply@ajjrpcparts.com";
-
-                @mail($email, $subject, $body, $headers);
-
-                $message =
-                    "Registration successful. Please verify your email before logging in.";
-
-                $dev_link = $verify_link;
+            if (mysqli_stmt_num_rows($check) > 0) {
+                $message = "Email is already registered.";
+                $message_type = "error";
             } else {
-                $message = "Registration failed. Please try again.";
+                $hashed_password = password_hash(
+                    $password,
+                    PASSWORD_DEFAULT
+                );
+
+                $role = "buyer";
+                $is_verified = 1;
+
+                $stmt = mysqli_prepare(
+                    $conn,
+                    "INSERT INTO users
+                    (
+                        first_name,
+                        middle_name,
+                        last_name,
+                        email,
+                        password,
+                        region,
+                        province,
+                        municipality,
+                        barangay,
+                        contact_number,
+                        role,
+                        is_verified,
+                        verification_token
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)"
+                );
+
+                if (!$stmt) {
+                    $message = "Registration could not be processed. Please try again.";
+                    $message_type = "error";
+                } else {
+                    mysqli_stmt_bind_param(
+                        $stmt,
+                        "sssssssssssi",
+                        $first_name,
+                        $middle_name,
+                        $last_name,
+                        $email,
+                        $hashed_password,
+                        $region,
+                        $province,
+                        $municipality,
+                        $barangay,
+                        $contact_number,
+                        $role,
+                        $is_verified
+                    );
+
+                    if (mysqli_stmt_execute($stmt)) {
+                        $message = "Registration successful. You can now log in using your new account.";
+                        $message_type = "success";
+
+                        $first_name = "";
+                        $middle_name = "";
+                        $last_name = "";
+                        $email = "";
+                        $region = "";
+                        $province = "";
+                        $municipality = "";
+                        $barangay = "";
+                        $contact_number = "";
+                    } else {
+                        $message = "Registration failed. Please try again.";
+                        $message_type = "error";
+                    }
+
+                    mysqli_stmt_close($stmt);
+                }
             }
 
-            mysqli_stmt_close($stmt);
+            mysqli_stmt_close($check);
         }
-
-        mysqli_stmt_close($check);
     }
 }
 ?>
@@ -127,7 +154,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </h1>
 
         <p class="text-slate-400 mt-5 text-lg">
-            Register as a buyer to browse products, add items to cart,
+            Register as a buyer to browse products, add items to your cart,
             and checkout your PC parts.
         </p>
 
@@ -138,9 +165,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             <ul class="space-y-3 text-slate-400">
                 <li>✓ Browse categorized PC parts</li>
-                <li>✓ Add products to cart</li>
+                <li>✓ Add products to your cart</li>
                 <li>✓ Checkout with simple payment options</li>
-                <li>✓ Secure password using PHP hashing</li>
+                <li>✓ Secure passwords using PHP password hashing</li>
             </ul>
         </div>
     </div>
@@ -159,20 +186,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </p>
 
         <?php if ($message !== "") { ?>
-            <div class="mb-5 bg-cyan-400/10 border border-cyan-400/30 text-cyan-300 px-4 py-3 rounded-xl text-sm">
-                <?php echo htmlspecialchars($message); ?>
+            <?php if ($message_type === "success") { ?>
+                <div class="mb-5 bg-green-500/10 border border-green-500/30 text-green-300 px-4 py-3 rounded-xl text-sm">
+                    <?php echo htmlspecialchars($message); ?>
 
-                <?php if ($dev_link !== "") { ?>
-                    <br>
-
-                    <a
-                        href="<?php echo htmlspecialchars($dev_link); ?>"
-                        class="underline font-bold"
-                    >
-                        Click here to verify for local testing
-                    </a>
-                <?php } ?>
-            </div>
+                    <div class="mt-3">
+                        <a
+                            href="login.php"
+                            class="inline-block bg-green-400 hover:bg-green-300 text-slate-950 px-4 py-2 rounded-lg font-black transition"
+                        >
+                            Go to Login
+                        </a>
+                    </div>
+                </div>
+            <?php } else { ?>
+                <div class="mb-5 bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl text-sm">
+                    <?php echo htmlspecialchars($message); ?>
+                </div>
+            <?php } ?>
         <?php } ?>
 
         <div class="grid md:grid-cols-3 gap-4 mb-4">
@@ -187,8 +218,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     name="first_name"
                     id="first_name"
                     required
+                    value="<?php echo htmlspecialchars($first_name ?? ''); ?>"
                     placeholder="Juan"
-                    class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 focus:border-cyan-400"
+                    class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
                 >
             </div>
 
@@ -201,8 +233,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     type="text"
                     name="middle_name"
                     id="middle_name"
+                    value="<?php echo htmlspecialchars($middle_name ?? ''); ?>"
                     placeholder="Dela"
-                    class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 focus:border-cyan-400"
+                    class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
                 >
             </div>
 
@@ -216,8 +249,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     name="last_name"
                     id="last_name"
                     required
+                    value="<?php echo htmlspecialchars($last_name ?? ''); ?>"
                     placeholder="Cruz"
-                    class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 focus:border-cyan-400"
+                    class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
                 >
             </div>
 
@@ -235,8 +269,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     name="email"
                     id="email"
                     required
+                    autocomplete="email"
+                    value="<?php echo htmlspecialchars($email ?? ''); ?>"
                     placeholder="example@email.com"
-                    class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 focus:border-cyan-400"
+                    class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
                 >
             </div>
 
@@ -251,8 +287,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     id="password"
                     required
                     minlength="6"
+                    autocomplete="new-password"
                     placeholder="Minimum 6 characters"
-                    class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 focus:border-cyan-400"
+                    class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
                 >
             </div>
 
@@ -267,11 +304,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     id="confirm_password"
                     required
                     minlength="6"
+                    autocomplete="new-password"
                     placeholder="Repeat password"
-                    class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 focus:border-cyan-400"
+                    class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
                 >
 
-                <p id="password_error" class="hidden text-red-400 text-xs mt-1">
+                <p
+                    id="password_error"
+                    class="hidden text-red-400 text-xs mt-1"
+                >
                     Passwords do not match.
                 </p>
             </div>
@@ -286,7 +327,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     <select
                         id="region"
                         required
-                        class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 focus:border-cyan-400"
+                        class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
                     >
                         <option value="">Loading regions...</option>
                     </select>
@@ -301,7 +342,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         id="province"
                         required
                         disabled
-                        class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 focus:border-cyan-400"
+                        class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
                     >
                         <option value="">Select a region first</option>
                     </select>
@@ -316,7 +357,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         id="city"
                         required
                         disabled
-                        class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 focus:border-cyan-400"
+                        class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
                     >
                         <option value="">Select a province first</option>
                     </select>
@@ -331,18 +372,44 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         id="barangay"
                         required
                         disabled
-                        class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 focus:border-cyan-400"
+                        class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
                     >
                         <option value="">Select a city first</option>
                     </select>
                 </div>
 
-                <input type="hidden" name="region" id="region_hidden">
-                <input type="hidden" name="province" id="province_hidden">
-                <input type="hidden" name="municipality" id="municipality_hidden">
-                <input type="hidden" name="barangay" id="barangay_hidden">
+                <input
+                    type="hidden"
+                    name="region"
+                    id="region_hidden"
+                    value="<?php echo htmlspecialchars($region ?? ''); ?>"
+                >
 
-                <p id="location_error" class="hidden text-red-400 text-sm"></p>
+                <input
+                    type="hidden"
+                    name="province"
+                    id="province_hidden"
+                    value="<?php echo htmlspecialchars($province ?? ''); ?>"
+                >
+
+                <input
+                    type="hidden"
+                    name="municipality"
+                    id="municipality_hidden"
+                    value="<?php echo htmlspecialchars($municipality ?? ''); ?>"
+                >
+
+                <input
+                    type="hidden"
+                    name="barangay"
+                    id="barangay_hidden"
+                    value="<?php echo htmlspecialchars($barangay ?? ''); ?>"
+                >
+
+                <p
+                    id="location_error"
+                    class="hidden text-red-400 text-sm"
+                ></p>
 
             </div>
 
@@ -356,6 +423,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     name="contact_number"
                     id="contact_number"
                     required
+                    value="<?php echo htmlspecialchars($contact_number ?? ''); ?>"
                     placeholder="09XXXXXXXXX"
                     pattern="09[0-9]{9}"
                     minlength="11"
@@ -363,10 +431,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     inputmode="numeric"
                     autocomplete="tel"
                     title="Enter an 11-digit Philippine mobile number starting with 09."
-                    class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 focus:border-cyan-400"
+                    class="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
                 >
 
-                <p id="contact_error" class="hidden text-red-400 text-xs mt-1">
+                <p
+                    id="contact_error"
+                    class="hidden text-red-400 text-xs mt-1"
+                >
                     Contact number must start with 09 and contain exactly 11 digits.
                 </p>
             </div>
@@ -383,7 +454,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <p class="text-center text-sm text-slate-400 mt-5">
             Already have an account?
 
-            <a href="login.php" class="text-cyan-400 font-bold">
+            <a
+                href="login.php"
+                class="text-cyan-400 font-bold"
+            >
                 Login here
             </a>
         </p>
@@ -395,6 +469,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <script>
 document.addEventListener('DOMContentLoaded', async function () {
     const form = document.getElementById('registration_form');
+
     const region = document.getElementById('region');
     const province = document.getElementById('province');
     const city = document.getElementById('city');
@@ -417,12 +492,15 @@ document.addEventListener('DOMContentLoaded', async function () {
     let locationData = {};
 
     function setOptions(select, placeholder, values = []) {
-        select.innerHTML = `<option value="">${placeholder}</option>`;
+        select.innerHTML =
+            `<option value="">${placeholder}</option>`;
 
         values.forEach(value => {
             const option = document.createElement('option');
+
             option.value = value.value;
             option.textContent = value.text;
+
             select.appendChild(option);
         });
     }
@@ -434,10 +512,17 @@ document.addEventListener('DOMContentLoaded', async function () {
             city.value &&
             barangay.value
         ) {
-            regionHidden.value = region.options[region.selectedIndex].text;
-            provinceHidden.value = province.options[province.selectedIndex].text;
-            municipalityHidden.value = city.options[city.selectedIndex].text;
-            barangayHidden.value = barangay.options[barangay.selectedIndex].text;
+            regionHidden.value =
+                region.options[region.selectedIndex].text;
+
+            provinceHidden.value =
+                province.options[province.selectedIndex].text;
+
+            municipalityHidden.value =
+                city.options[city.selectedIndex].text;
+
+            barangayHidden.value =
+                barangay.options[barangay.selectedIndex].text;
         } else {
             regionHidden.value = '';
             provinceHidden.value = '';
@@ -468,7 +553,11 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         region.disabled = false;
     } catch (error) {
-        setOptions(region, 'Locations failed to load');
+        setOptions(
+            region,
+            'Locations failed to load'
+        );
+
         region.disabled = true;
 
         locationError.textContent =
@@ -478,9 +567,20 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     region.addEventListener('change', function () {
-        setOptions(province, 'Select Province');
-        setOptions(city, 'Select a province first');
-        setOptions(barangay, 'Select a city first');
+        setOptions(
+            province,
+            'Select Province'
+        );
+
+        setOptions(
+            city,
+            'Select a province first'
+        );
+
+        setOptions(
+            barangay,
+            'Select a city first'
+        );
 
         province.disabled = true;
         city.disabled = true;
@@ -504,12 +604,20 @@ document.addEventListener('DOMContentLoaded', async function () {
         );
 
         province.disabled = false;
+
         updateAddress();
     });
 
     province.addEventListener('change', function () {
-        setOptions(city, 'Select City / Municipality');
-        setOptions(barangay, 'Select a city first');
+        setOptions(
+            city,
+            'Select City / Municipality'
+        );
+
+        setOptions(
+            barangay,
+            'Select a city first'
+        );
 
         city.disabled = true;
         barangay.disabled = true;
@@ -534,11 +642,16 @@ document.addEventListener('DOMContentLoaded', async function () {
         );
 
         city.disabled = false;
+
         updateAddress();
     });
 
     city.addEventListener('change', function () {
-        setOptions(barangay, 'Select Barangay');
+        setOptions(
+            barangay,
+            'Select Barangay'
+        );
+
         barangay.disabled = true;
 
         if (!city.value) {
@@ -562,10 +675,14 @@ document.addEventListener('DOMContentLoaded', async function () {
         );
 
         barangay.disabled = false;
+
         updateAddress();
     });
 
-    barangay.addEventListener('change', updateAddress);
+    barangay.addEventListener(
+        'change',
+        updateAddress
+    );
 
     function validatePasswords() {
         const matches =
@@ -579,8 +696,15 @@ document.addEventListener('DOMContentLoaded', async function () {
         return matches;
     }
 
-    password.addEventListener('input', validatePasswords);
-    confirmPassword.addEventListener('input', validatePasswords);
+    password.addEventListener(
+        'input',
+        validatePasswords
+    );
+
+    confirmPassword.addEventListener(
+        'input',
+        validatePasswords
+    );
 
     contact.addEventListener('keydown', function (event) {
         const allowedKeys = [
@@ -637,9 +761,13 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 
     contact.addEventListener('input', function () {
-        let value = contact.value.replace(/\D/g, '');
+        let value =
+            contact.value.replace(/\D/g, '');
 
-        if (value.length > 0 && value.charAt(0) !== '0') {
+        if (
+            value.length > 0 &&
+            value.charAt(0) !== '0'
+        ) {
             value = '';
         }
 
@@ -650,10 +778,14 @@ document.addEventListener('DOMContentLoaded', async function () {
             value = '0';
         }
 
-        contact.value = value.substring(0, 11);
+        contact.value =
+            value.substring(0, 11);
 
-        const valid = /^09\d{9}$/.test(contact.value);
-        const empty = contact.value === '';
+        const valid =
+            /^09\d{9}$/.test(contact.value);
+
+        const empty =
+            contact.value === '';
 
         contactError.classList.toggle(
             'hidden',
@@ -676,25 +808,36 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         if (!validatePasswords()) {
             event.preventDefault();
+
             passwordError.classList.remove('hidden');
+
             confirmPassword.focus();
+
             return;
         }
 
-        if (!regionHidden.value || !provinceHidden.value || !municipalityHidden.value || !barangayHidden.value) {
+        if (
+            !regionHidden.value ||
+            !provinceHidden.value ||
+            !municipalityHidden.value ||
+            !barangayHidden.value
+        ) {
             event.preventDefault();
 
             locationError.textContent =
                 'Please select your region, province, city, and barangay.';
 
             locationError.classList.remove('hidden');
+
             return;
         }
 
         if (!/^09\d{9}$/.test(contact.value)) {
             event.preventDefault();
+
             contactError.classList.remove('hidden');
             contact.classList.add('border-red-500');
+
             contact.focus();
         }
     });
