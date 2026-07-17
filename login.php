@@ -27,8 +27,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 last_name,
                 email,
                 password,
-                role,
-                is_verified
+                role
              FROM users
              WHERE email = ?
              LIMIT 1"
@@ -37,32 +36,58 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if (!$stmt) {
             $message = "Unable to process your login. Please try again.";
         } else {
-            mysqli_stmt_bind_param($stmt, "s", $email);
+            mysqli_stmt_bind_param(
+                $stmt,
+                "s",
+                $email
+            );
+
             mysqli_stmt_execute($stmt);
 
-            $result = mysqli_stmt_get_result($stmt);
-            $user = mysqli_fetch_assoc($result);
+            $result =
+                mysqli_stmt_get_result($stmt);
+
+            $user =
+                mysqli_fetch_assoc($result);
 
             if (!$user) {
                 $message = "Account not found.";
-            } elseif (!password_verify($password, $user['password'])) {
+            } elseif (
+                !password_verify(
+                    $password,
+                    $user['password']
+                )
+            ) {
                 $message = "Incorrect password.";
-            } elseif ((int) $user['is_verified'] !== 1) {
-                $message = "Please verify your email first.";
             } else {
                 session_regenerate_id(true);
 
-                $_SESSION['user_id'] = $user['user_id'];
-                $_SESSION['first_name'] = $user['first_name'];
-                $_SESSION['middle_name'] = $user['middle_name'];
-                $_SESSION['last_name'] = $user['last_name'];
-                $_SESSION['email'] = $user['email'];
-                $_SESSION['role'] = $user['role'];
+                $_SESSION['user_id'] =
+                    $user['user_id'];
+
+                $_SESSION['first_name'] =
+                    $user['first_name'];
+
+                $_SESSION['middle_name'] =
+                    $user['middle_name'];
+
+                $_SESSION['last_name'] =
+                    $user['last_name'];
+
+                $_SESSION['email'] =
+                    $user['email'];
+
+                $_SESSION['role'] =
+                    $user['role'];
 
                 if ($user['role'] === 'admin') {
-                    header("Location: seller/dashboard.php");
+                    header(
+                        "Location: seller/dashboard.php"
+                    );
                 } else {
-                    header("Location: store.php");
+                    header(
+                        "Location: store.php"
+                    );
                 }
 
                 exit;
@@ -77,6 +102,7 @@ include 'includes/header.php';
 ?>
 
 <section class="max-w-md mx-auto px-6 py-20">
+
     <form
         method="POST"
         class="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl"
@@ -95,7 +121,10 @@ include 'includes/header.php';
             </div>
         <?php } ?>
 
-        <label for="email" class="text-sm text-slate-300">
+        <label
+            for="email"
+            class="text-sm text-slate-300"
+        >
             Email Address
         </label>
 
@@ -110,7 +139,10 @@ include 'includes/header.php';
             placeholder="example@email.com"
         >
 
-        <label for="password" class="text-sm text-slate-300">
+        <label
+            for="password"
+            class="text-sm text-slate-300"
+        >
             Password
         </label>
 
@@ -134,11 +166,15 @@ include 'includes/header.php';
         <p class="text-center text-sm text-slate-400 mt-5">
             No account yet?
 
-            <a href="register.php" class="text-cyan-400 font-bold">
+            <a
+                href="register.php"
+                class="text-cyan-400 font-bold"
+            >
                 Register here
             </a>
         </p>
     </form>
+
 </section>
 
 <?php include 'includes/footer.php'; ?>
